@@ -1,4 +1,56 @@
-One of the core principles of software development is DRY (Don't Repeat
-Yourself). This is a principle that apply to documentation as
-well. If you find yourself repeating the same content in multiple places, you
-should consider creating a custom snippet to keep your content in sync.
+function ExtractNumberPlateInfo(imageFilePath)
+    im = imread(imageFilePath);
+    imgray = rgb2gray(im);
+    imbin = imbinarize(imgray);
+    im = edge(imgray, 'prewitt');
+
+  %Below steps are to find location of number plate
+    Iprops=regionprops(im,'BoundingBox','Area', 'Image');
+    area = [Iprops.Area];
+    [maxArea, indexOfMax] = max(area);
+    boundingBox = Iprops(indexOfMax).BoundingBox;
+
+    im = imcrop(imbin, boundingBox); %crop the number plate area
+    im = bwareaopen(~im, 500); %remove some object if it width is too long or too small than 500
+
+    [h, w] = size(im); %get width
+
+    imshow(im);
+
+    Iprops=regionprops(im,'BoundingBox','Area', 'Image'); %read letter
+    count = numel(Iprops);
+    noPlate=[]; % Initializing the variable of number plate string.
+
+    for i=1:count
+       ow = length(Iprops(i).Image(1,:));
+       oh = length(Iprops(i).Image(:,1));
+       if ow<(h/2) && oh>(h/3)
+           letter=Letter_detection(Iprops(i).Image); % Reading the letter corresponding the binary image 'N'.
+           noPlate=[noPlate letter]; % Appending every subsequent character in noPlate variable.
+       end
+    end
+
+    currentDate = datestr(now, 'yyyy-mm-dd');
+    currentTime = datestr(now, 'HH:MM:SS');
+
+    % Open Excel file
+    excelFile = 'data.xlsx';  % Change to your Excel file name
+    try
+        excelData = xlsread(excelFile);  % Read existing data
+    catch
+        excelData = [];  % If file doesn't exist or is empty
+    end
+
+    % Find the next available row
+    nextRow = size(excelData, 1) + 1;
+
+    % Write data to Excel
+    newData = {currentDate, currentTime, noPlate};
+    xlswrite(excelFile, newData, 1, ['A' num2str(nextRow)]);
+end
+
+
+
+
+
+% ExtractNumberPlateInfo('Number Plate Images/image2.png');
